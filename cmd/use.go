@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"sshd/services"
+	"alfred-tool/services"
 )
 
 var useCmd = &cobra.Command{

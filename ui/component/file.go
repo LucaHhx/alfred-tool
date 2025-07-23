@@ -20,3 +20,17 @@ func ShowMacNativeFileDialog() string {
 	macPath := strings.TrimSpace(out.String())
 	return macPath
 }
+
+func ShowMacNativeFolderDialog() string {
+	script := `POSIX path of (choose folder)`
+	cmd := exec.Command("osascript", "-e", script)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return ""
+	}
+	// mac 返回路径带冒号，需要转换为标准路径
+	macPath := strings.TrimSpace(out.String())
+	return macPath
+}

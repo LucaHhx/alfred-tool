@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"sshd/database"
+	"alfred-tool/database"
 )
 
 var rootCmd = &cobra.Command{

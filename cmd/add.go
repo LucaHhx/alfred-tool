@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"sshd/ui"
+	"alfred-tool/ui"
 )
 
 var addCmd = &cobra.Command{

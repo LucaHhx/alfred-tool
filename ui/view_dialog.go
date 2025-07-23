@@ -3,15 +3,15 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"sshd/ui/component"
-	"sshd/ui/icons"
-	"sshd/ui/xtheme"
+	"alfred-tool/ui/component"
+	"alfred-tool/ui/icons"
+	"alfred-tool/ui/xtheme"
 	"strconv"
 	"strings"
 
-	"sshd/database"
-	"sshd/models"
-	"sshd/services"
+	"alfred-tool/database"
+	"alfred-tool/models"
+	"alfred-tool/services"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -38,8 +38,8 @@ func ShowViewDialog(connectionName string) (err error) {
 	}
 
 	myApp := app.New()
+	myApp.SetIcon(icons.Icon_Copy)
 	myApp.Settings().SetTheme(&xtheme.XTheme{})
-
 	// 根据模式设置窗口标题
 	var windowTitle string
 	if isUpdateMode {
@@ -50,6 +50,7 @@ func ShowViewDialog(connectionName string) (err error) {
 	myWindow := myApp.NewWindow(windowTitle)
 	myWindow.Resize(fyne.NewSize(502, 355))
 	myWindow.SetFixedSize(true)
+	myWindow.SetIcon(icons.Icon_Query)
 
 	// 设置窗口居中并保持在前台
 	myWindow.CenterOnScreen()

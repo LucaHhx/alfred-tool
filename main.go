@@ -1,7 +1,7 @@
 package main
 
 import (
-	"sshd/cmd"
+	"alfred-tool/cmd"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module sshd
+module alfred-tool
 
 go 1.21
 

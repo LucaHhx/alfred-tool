@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"sshd/services"
+	"alfred-tool/services"
 )
 
 var sshsyncCmd = &cobra.Command{

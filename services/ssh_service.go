@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"sshd/database"
-	"sshd/models"
+	"alfred-tool/database"
+	"alfred-tool/models"
 )
 
 func SearchConnections(query string) ([]models.SSHConnection, error) {

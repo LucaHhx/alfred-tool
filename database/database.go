@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"sshd/models"
+	"alfred-tool/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -35,7 +35,7 @@ func InitDB() {
 	}
 
 	// 自动迁移
-	if err := DB.AutoMigrate(&models.SSHConnection{}); err != nil {
+	if err := DB.AutoMigrate(&models.SSHConnection{}, &models.RsyncConfig{}); err != nil {
 		log.Fatal("数据库迁移失败:", err)
 	}
 

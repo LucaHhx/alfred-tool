@@ -5,8 +5,8 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"sshd/models"
-	"sshd/services"
+	"alfred-tool/models"
+	"alfred-tool/services"
 )
 
 var listCmd = &cobra.Command{

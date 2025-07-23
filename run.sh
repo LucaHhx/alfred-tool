@@ -15,5 +15,5 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # 编译并运行
-go build -o sshd .
-./sshd "$@"
+go build -o alfred-tool .
+./alfred-tool "$@"
