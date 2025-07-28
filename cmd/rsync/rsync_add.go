@@ -1,13 +1,13 @@
-package cmd
+package rsync
 
 import (
-	"fmt"
 	"alfred-tool/ui"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-var rsyncAddCmd = &cobra.Command{
+var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "添加rsync配置",
 	Long:  `打开图形界面添加新的rsync配置`,
@@ -17,8 +17,4 @@ var rsyncAddCmd = &cobra.Command{
 			fmt.Printf("错误: %v\n", err)
 		}
 	},
-}
-
-func init() {
-	rsyncCmd.AddCommand(rsyncAddCmd)
 }

@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
+	"alfred-tool/cmd/rsync"
+	"alfred-tool/cmd/service"
+	"alfred-tool/cmd/ssh"
 	"alfred-tool/database"
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "sshd",
-	Short: "SSH连接管理工具",
-	Long:  `一个用于管理SSH连接的命令行工具，支持添加、搜索、列出、修改和删除SSH连接配置。`,
+	Use:   "alfred-tool",
+	Short: "Alfred效率工具箱",
+	Long:  `Alfred效率工具箱 - 一个多功能的命令行工具，支持SSH连接管理、Rsync同步和服务管理。`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		database.InitDB()
 	},
@@ -25,10 +28,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(addCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(searchCmd)
-	rootCmd.AddCommand(updateCmd)
-	rootCmd.AddCommand(deleteCmd)
-	rootCmd.AddCommand(sshsyncCmd)
+	rootCmd.AddCommand(ssh.SshCmd)
+	rootCmd.AddCommand(rsync.RsyncCmd)
+	rootCmd.AddCommand(service.ServiceCmd)
 }

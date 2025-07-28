@@ -1,16 +1,16 @@
-package cmd
+package ssh
 
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"alfred-tool/ui"
+	"github.com/spf13/cobra"
 )
 
-var updateCmd = &cobra.Command{
+var UpdateCmd = &cobra.Command{
 	Use:   "update <name>",
-	Short: "修改SSH连接",
-	Long:  `通过图形界面修改指定名称的SSH连接配置。`,
+	Short: "更新SSH连接",
+	Long:  `更新指定名称的SSH连接配置。`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		connectionName := args[0]

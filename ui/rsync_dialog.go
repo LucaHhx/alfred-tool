@@ -1,11 +1,11 @@
 package ui
 
 import (
-	"errors"
-	"fmt"
 	"alfred-tool/ui/component"
 	"alfred-tool/ui/icons"
 	"alfred-tool/ui/xtheme"
+	"errors"
+	"fmt"
 	"strings"
 
 	"alfred-tool/database"

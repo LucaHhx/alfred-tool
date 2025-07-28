@@ -1,8 +1,8 @@
-package cmd
+package rsync
 
 import (
-	"fmt"
 	"alfred-tool/services"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -11,7 +11,7 @@ var (
 	dryRun bool
 )
 
-var rsyncRunCmd = &cobra.Command{
+var runCmd = &cobra.Command{
 	Use:   "run [配置名称]",
 	Short: "执行rsync配置",
 	Long:  `执行指定的rsync配置进行文件同步`,
@@ -38,9 +38,4 @@ var rsyncRunCmd = &cobra.Command{
 		}
 		fmt.Printf("rsync配置 '%s' 执行完成\n", configName)
 	},
-}
-
-func init() {
-	rsyncRunCmd.Flags().BoolVar(&dryRun, "dry-run", false, "预览模式，只显示命令不执行")
-	rsyncCmd.AddCommand(rsyncRunCmd)
 }

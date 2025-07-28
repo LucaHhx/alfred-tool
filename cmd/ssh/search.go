@@ -1,17 +1,17 @@
-package cmd
+package ssh
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"alfred-tool/services"
+	"github.com/spf13/cobra"
 )
 
-var searchCmd = &cobra.Command{
+var SearchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "搜索SSH连接",
-	Long:  `根据名称或地址搜索SSH连接。`,
+	Long:  `根据关键词搜索SSH连接。`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		query := strings.Join(args, " ")

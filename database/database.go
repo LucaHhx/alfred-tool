@@ -35,7 +35,7 @@ func InitDB() {
 	}
 
 	// 自动迁移
-	if err := DB.AutoMigrate(&models.SSHConnection{}, &models.RsyncConfig{}); err != nil {
+	if err := DB.AutoMigrate(&models.SSHConnection{}, &models.RsyncConfig{}, &models.Service{}); err != nil {
 		log.Fatal("数据库迁移失败:", err)
 	}
 

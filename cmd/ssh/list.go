@@ -1,17 +1,18 @@
-package cmd
+package ssh
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/samber/lo"
-	"github.com/spf13/cobra"
 	"alfred-tool/models"
 	"alfred-tool/services"
+	"github.com/samber/lo"
+	"github.com/spf13/cobra"
 )
 
-var listCmd = &cobra.Command{
+var ListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "显示所有SSH连接",
+	Short: "列出所有SSH连接",
 	Long:  `列出所有已保存的SSH连接配置。`,
 	Run: func(cmd *cobra.Command, args []string) {
 		connections, err := services.ListAllConnections()
@@ -41,7 +42,12 @@ func displayConnections(connections []models.SSHConnection) {
 			}
 		}),
 	}
-	Echo_Success(alfredData)
+	marshal, err := json.Marshal(alfredData)
+	if err != nil {
+		fmt.Printf("JSON序列化失败: %v\n", err)
+		return
+	}
+	fmt.Println(string(marshal))
 }
 
 func truncateString(s string, length int) string {

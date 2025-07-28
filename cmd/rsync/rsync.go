@@ -1,10 +1,10 @@
-package cmd
+package rsync
 
 import (
 	"github.com/spf13/cobra"
 )
 
-var rsyncCmd = &cobra.Command{
+var RsyncCmd = &cobra.Command{
 	Use:   "rsync",
 	Short: "Rsync配置管理",
 	Long: `管理rsync配置，支持本地和远程服务器之间的文件同步
@@ -18,5 +18,10 @@ rsync配置包含以下功能：
 }
 
 func init() {
-	rootCmd.AddCommand(rsyncCmd)
+	RsyncCmd.AddCommand(addCmd)
+	RsyncCmd.AddCommand(listCmd)
+	RsyncCmd.AddCommand(searchCmd)
+	RsyncCmd.AddCommand(updateCmd)
+	RsyncCmd.AddCommand(deleteCmd)
+	RsyncCmd.AddCommand(runCmd)
 }

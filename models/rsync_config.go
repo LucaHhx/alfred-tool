@@ -172,16 +172,16 @@ func (r *RsyncConfig) GetVariables() map[string]string {
 	if r.Direction == RsyncDirectionDownload {
 		direction = "download"
 	}
-	
+
 	return map[string]string{
-		"rsync_name":         r.Name,
-		"rsync_ssh_name":     r.SSHName,
-		"rsync_direction":    direction,
-		"rsync_local_path":   r.LocalPath,
-		"rsync_remote_path":  r.RemotePath,
-		"rsync_exclude":      r.ExcludeRules,
-		"rsync_options":      r.Options,
-		"rsync_description":  r.Description,
-		"rsync_usage_count":  fmt.Sprintf("%d", r.UsageCount),
+		"rsync_name":        r.Name,
+		"rsync_ssh_name":    r.SSHName,
+		"rsync_direction":   direction,
+		"rsync_local_path":  r.LocalPath,
+		"rsync_remote_path": r.RemotePath,
+		"rsync_exclude":     r.ExcludeRules,
+		"rsync_options":     r.Options,
+		"rsync_description": r.Description,
+		"rsync_usage_count": fmt.Sprintf("%d", r.UsageCount),
 	}
 }

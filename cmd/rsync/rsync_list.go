@@ -1,15 +1,16 @@
-package cmd
+package rsync
 
 import (
-	"fmt"
 	"alfred-tool/models"
 	"alfred-tool/services"
+	"encoding/json"
+	"fmt"
 
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
 
-var rsyncListCmd = &cobra.Command{
+var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "列出所有rsync配置",
 	Long:  `显示所有已保存的rsync配置`,
@@ -35,7 +36,7 @@ func displayRsyncConfigs(configs []models.RsyncConfig) {
 
 			title := fmt.Sprintf("%s %s [%s]", direction, item.Name, item.SSHName)
 			subtitle := fmt.Sprintf("%s: %s ↔ %s", directionText, truncateString(item.LocalPath, 25), truncateString(item.RemotePath, 25))
-			
+
 			if item.Description != "" {
 				subtitle += fmt.Sprintf(" - %s", truncateString(item.Description, 30))
 			}
@@ -49,9 +50,17 @@ func displayRsyncConfigs(configs []models.RsyncConfig) {
 			}
 		}),
 	}
-	Echo_Success(alfredData)
+	marshal, err := json.Marshal(alfredData)
+	if err != nil {
+		fmt.Printf("JSON序列化失败: %v\n", err)
+		return
+	}
+	fmt.Println(string(marshal))
 }
 
-func init() {
-	rsyncCmd.AddCommand(rsyncListCmd)
+func truncateString(s string, length int) string {
+	if len(s) <= length {
+		return s
+	}
+	return s[:length-3] + "..."
 }

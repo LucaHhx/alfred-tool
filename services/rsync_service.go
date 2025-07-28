@@ -1,11 +1,11 @@
 package services
 
 import (
+	"alfred-tool/database"
+	"alfred-tool/models"
 	"fmt"
 	"os"
 	"os/exec"
-	"alfred-tool/database"
-	"alfred-tool/models"
 	"strings"
 )
 
