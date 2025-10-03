@@ -1,0 +1,38 @@
+{
+  "windowTitle": "功能测试",
+  "windowWidth": 600,
+  "windowHeight": 500,
+  "okLabel": "确定",
+  "cancelLabel": "取消",
+  "alwaysOnTop": true,
+  "fields": [
+    {
+      "type": "text",
+      "label": "用户名",
+      "bindingKey": "username",
+      "defaultValue": "测试用户",
+      "copy": true
+    },
+    {
+      "type": "texteditor",
+      "label": "备注信息",
+      "bindingKey": "notes",
+      "defaultValue": "这是一段测试文本\n可以复制到剪贴板",
+      "copy": true
+    },
+    {
+      "type": "filepicker",
+      "label": "选择文件",
+      "bindingKey": "filepath",
+      "filePickerType": "file",
+      "defaultValue": ""
+    },
+    {
+      "type": "filepicker",
+      "label": "选择文件夹",
+      "bindingKey": "folderpath",
+      "filePickerType": "folder",
+      "defaultValue": ""
+    }
+  ]
+}

@@ -72,12 +72,14 @@ swiftc dialog.swift -o dialog
   "windowHeight": 300,
   "okLabel": "确定",
   "cancelLabel": "取消",
+  "alwaysOnTop": false,
   "fields": [
     {
       "type": "text",
       "label": "用户名",
       "bindingKey": "username",
-      "defaultValue": ""
+      "defaultValue": "",
+      "copy": true
     },
     {
       "type": "checkbox",
@@ -91,6 +93,20 @@ swiftc dialog.swift -o dialog
       "bindingKey": "role",
       "options": ["管理员", "用户", "访客"],
       "defaultValue": "用户"
+    },
+    {
+      "type": "filepicker",
+      "label": "选择文件",
+      "bindingKey": "filepath",
+      "filePickerType": "file",
+      "defaultValue": ""
+    },
+    {
+      "type": "filepicker",
+      "label": "选择文件夹",
+      "bindingKey": "folderpath",
+      "filePickerType": "folder",
+      "defaultValue": ""
     }
   ]
 }
@@ -103,6 +119,13 @@ swiftc dialog.swift -o dialog
 - `dropdown`: 下拉菜单
 - `texteditor`: 可调整大小的多行文本编辑器
 - `segmented`: 分段单选按钮组
+- `filepicker`: 文件/文件夹选择器（支持浏览按钮和手动输入路径）
+  - 通过 `filePickerType` 参数指定类型：`"file"` 选择文件，`"folder"` 选择文件夹
+
+### 字段参数说明
+
+- `copy` (可选): 设置为 `true` 时，在 `text` 或 `texteditor` 字段后显示"复制"按钮，可将内容复制到剪贴板
+- `alwaysOnTop` (可选): 设置为 `true` 时，窗口将始终置顶显示在其他窗口之上
 
 ### 输出格式
 

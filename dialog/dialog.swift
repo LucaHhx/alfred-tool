@@ -63,7 +63,7 @@ func loadConfig(from pathOrJSON: String) -> Config {
 // MARK: - Config Models
 struct Field: Identifiable, Codable {
     enum FieldType: String, Codable {
-        case text, checkbox, dropdown, texteditor, segmented
+        case text, checkbox, dropdown, texteditor, segmented, filepicker
     }
     let id = UUID()
     let type: FieldType
@@ -71,9 +71,11 @@ struct Field: Identifiable, Codable {
     let bindingKey: String
     let options: [String]?
     let defaultValue: String?
+    let filePickerType: String? // "file" or "folder"
+    let copy: Bool? // show copy button for text/texteditor
 
     private enum CodingKeys: String, CodingKey {
-        case type, label, bindingKey, options, defaultValue
+        case type, label, bindingKey, options, defaultValue, filePickerType, copy
     }
 }
 
@@ -84,6 +86,7 @@ struct Config: Codable {
     let fields: [Field]
     let okLabel: String?
     let cancelLabel: String?
+    let alwaysOnTop: Bool?
 }
 
 // MARK: - NSTextViewRepresentable for Resizable TextEditor (CustomTextView)
@@ -146,26 +149,15 @@ struct NSTextViewRepresentable: NSViewRepresentable {
     }
 }
 
-// MARK: - Resizable TextEditor with Drag Handle
-struct ResizableTextEditor: View {
+// MARK: - Fixed Size TextEditor
+struct FixedTextEditor: View {
     @Binding var text: String
-    @State private var height: CGFloat = 80
+    let height: CGFloat
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            NSTextViewRepresentable(text: $text)
-                .frame(height: height)
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .padding(4)
-                .background(Color.clear)
-                .gesture(
-                    DragGesture(minimumDistance: 1)
-                        .onChanged { value in
-                            let newHeight = height + value.translation.height
-                            height = max(newHeight, 50)
-                        }
-                )
-        }
+        NSTextViewRepresentable(text: $text)
+            .frame(height: height)
+            .border(Color.gray.opacity(0.2), width: 1)
     }
 }
 
@@ -200,6 +192,31 @@ struct FlowRadioGroup: View {
             default:
                 break
             }
+        }
+    }
+}
+
+// MARK: - FilePickerField (File/Folder Picker)
+struct FilePickerField: View {
+    @Binding var path: String
+    let pickerType: String // "file" or "folder"
+
+    var body: some View {
+        HStack(spacing: 8) {
+            TextField("", text: $path)
+                .textFieldStyle(.roundedBorder)
+
+            Button("浏览...") {
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = (pickerType == "file")
+                panel.canChooseDirectories = (pickerType == "folder")
+                panel.allowsMultipleSelection = false
+
+                if panel.runModal() == .OK, let url = panel.url {
+                    path = url.path
+                }
+            }
+            .frame(width: 80)
         }
     }
 }
@@ -263,6 +280,21 @@ struct DynamicDialogView: View {
                         .textFieldStyle(.roundedBorder)
                         // Make text fields significantly wider
                         .frame(minWidth: 400)
+
+                        if field.copy == true {
+                            Button(action: {
+                                let pasteboard = NSPasteboard.general
+                                pasteboard.clearContents()
+                                pasteboard.setString(
+                                    self.values[field.bindingKey] as? String ?? "",
+                                    forType: .string
+                                )
+                            }) {
+                                Label("", systemImage: "doc.on.doc")
+                            }
+                            .labelStyle(.iconOnly)
+                            .frame(width: 30)
+                        }
                     }
                 case .checkbox:
                     HStack(alignment: .center, spacing: 10) {
@@ -304,18 +336,34 @@ struct DynamicDialogView: View {
                         }
                     }
                 case .texteditor:
-                    HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(field.label + ":")
-                            .lineLimit(1)
-                            .frame(width: maxLabelWidth, alignment: .leading)
-                        ResizableTextEditor(
-                            text: Binding(
-                                get: { self.values[field.bindingKey] as? String ?? "" },
-                                set: { self.values[field.bindingKey] = $0 }
+                        HStack(alignment: .top, spacing: 10) {
+                            FixedTextEditor(
+                                text: Binding(
+                                    get: { self.values[field.bindingKey] as? String ?? "" },
+                                    set: { self.values[field.bindingKey] = $0 }
+                                ),
+                                height: 100
                             )
-                        )
-                        .frame(minWidth: 400, minHeight: 80)
+
+                            if field.copy == true {
+                                Button(action: {
+                                    let pasteboard = NSPasteboard.general
+                                    pasteboard.clearContents()
+                                    pasteboard.setString(
+                                        self.values[field.bindingKey] as? String ?? "",
+                                        forType: .string
+                                    )
+                                }) {
+                                    Label("", systemImage: "doc.on.doc")
+                                }
+                                .labelStyle(.iconOnly)
+                                .frame(width: 30)
+                            }
+                        }
                     }
+                    .padding(.vertical, 4)
                 case .segmented:
                     if let options = field.options, !options.isEmpty {
                         HStack(alignment: .center, spacing: 10) {
@@ -333,6 +381,20 @@ struct DynamicDialogView: View {
                             )
                             .frame(minWidth: 400)
                         }
+                    }
+                case .filepicker:
+                    HStack(alignment: .center, spacing: 10) {
+                        Text(field.label + ":")
+                            .lineLimit(1)
+                            .frame(width: maxLabelWidth, alignment: .leading)
+                        FilePickerField(
+                            path: Binding(
+                                get: { self.values[field.bindingKey] as? String ?? "" },
+                                set: { self.values[field.bindingKey] = $0 }
+                            ),
+                            pickerType: field.filePickerType ?? "file"
+                        )
+                        .frame(minWidth: 400)
                     }
                 }
             }
@@ -354,7 +416,7 @@ struct DynamicDialogView: View {
                     var output: [String: Any] = [:]
                     for field in fields {
                         switch field.type {
-                        case .text, .texteditor:
+                        case .text, .texteditor, .filepicker:
                             output[field.bindingKey] = values[field.bindingKey] as? String ?? ""
                         case .checkbox:
                             output[field.bindingKey] = values[field.bindingKey] as? Bool ?? false
@@ -392,6 +454,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+
+        // Suppress system debug messages
+        setenv("OS_ACTIVITY_MODE", "disable", 1)
 
         let mainMenu = NSMenu()
 
@@ -446,6 +511,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = config.windowTitle ?? "Dialog"
         window.center()
         window.contentView = NSHostingView(rootView: contentView)
+
+        // Set window level to floating if alwaysOnTop is true
+        if config.alwaysOnTop == true {
+            window.level = .floating
+        }
+
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
 
