@@ -1,0 +1,480 @@
+#!/usr/bin/swift
+
+//
+//  ReusableUserInputForm.swift
+//
+//  Created by andy4222 in 2025
+//
+//  MIT License
+//
+//  Copyright © 2025 andy4222
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+//  ***Attribution is required.*** If you use or adapt this code, you must clearly
+//  credit the original author: andy4222 https://www.alfredforum.com/profile/18304-andy4222/
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+//
+
+import AppKit
+import SwiftUI
+
+// MARK: - Command-line Config Loading
+func loadConfig(from pathOrJSON: String) -> Config {
+    let data: Data
+
+    // Try to parse as JSON string first
+    if let jsonData = pathOrJSON.data(using: .utf8),
+       let _ = try? JSONDecoder().decode(Config.self, from: jsonData) {
+        data = jsonData
+    } else {
+        // Fallback to file path
+        let url = URL(fileURLWithPath: pathOrJSON)
+        do {
+            data = try Data(contentsOf: url)
+        } catch {
+            fatalError("Error loading config from \(pathOrJSON): \(error)")
+        }
+    }
+
+    do {
+        let config = try JSONDecoder().decode(Config.self, from: data)
+        return config
+    } catch {
+        fatalError("Error decoding config: \(error)")
+    }
+}
+
+// MARK: - Config Models
+struct Field: Identifiable, Codable {
+    enum FieldType: String, Codable {
+        case text, checkbox, dropdown, texteditor, segmented
+    }
+    let id = UUID()
+    let type: FieldType
+    let label: String
+    let bindingKey: String
+    let options: [String]?
+    let defaultValue: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case type, label, bindingKey, options, defaultValue
+    }
+}
+
+struct Config: Codable {
+    let windowTitle: String?
+    let windowWidth: CGFloat?
+    let windowHeight: CGFloat?
+    let fields: [Field]
+    let okLabel: String?
+    let cancelLabel: String?
+}
+
+// MARK: - NSTextViewRepresentable for Resizable TextEditor (CustomTextView)
+final class CustomTextView: NSTextView {
+    override func keyDown(with event: NSEvent) {
+        if let characters = event.charactersIgnoringModifiers, characters == "\t" {
+            if self.string.isEmpty {
+                self.window?.selectNextKeyView(self)
+                return
+            }
+        }
+        super.keyDown(with: event)
+    }
+}
+
+struct NSTextViewRepresentable: NSViewRepresentable {
+    @Binding var text: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let textView = CustomTextView()
+        textView.isRichText = false
+        textView.isEditable = true
+        textView.delegate = context.coordinator
+        textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        textView.backgroundColor = NSColor.textBackgroundColor
+        textView.isHorizontallyResizable = true
+        textView.isVerticallyResizable = true
+        textView.autoresizingMask = [.width]
+
+        if let container = textView.textContainer {
+            container.widthTracksTextView = true
+            // Explicitly use CGFloat.greatestFiniteMagnitude to avoid ambiguity
+            container.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+        }
+
+        let scrollView = NSScrollView()
+        scrollView.documentView = textView
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard let textView = nsView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            textView.string = text
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: NSTextViewRepresentable
+        init(_ parent: NSTextViewRepresentable) { self.parent = parent }
+        func textDidChange(_ notification: Notification) {
+            if let textView = notification.object as? NSTextView {
+                parent.text = textView.string
+            }
+        }
+    }
+}
+
+// MARK: - Resizable TextEditor with Drag Handle
+struct ResizableTextEditor: View {
+    @Binding var text: String
+    @State private var height: CGFloat = 80
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            NSTextViewRepresentable(text: $text)
+                .frame(height: height)
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .padding(4)
+                .background(Color.clear)
+                .gesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { value in
+                            let newHeight = height + value.translation.height
+                            height = max(newHeight, 50)
+                        }
+                )
+        }
+    }
+}
+
+// MARK: - FlowRadioGroup (Horizontal, Wrapping Radio Buttons)
+struct FlowRadioGroup: View {
+    let options: [String]
+    @Binding var selection: String
+
+    var body: some View {
+        let columns = [GridItem(.adaptive(minimum: 60), spacing: 8)]
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(options, id: \.self) { option in
+                HStack(spacing: 8) {
+                    Image(systemName: selection == option ? "largecircle.fill.circle" : "circle")
+                    Text(option)
+                }
+                .onTapGesture {
+                    selection = option
+                }
+            }
+        }
+        .focusable()
+        .onMoveCommand { direction in
+            guard let currentIndex = options.firstIndex(of: selection) else { return }
+            switch direction {
+            case .left, .up:
+                let newIndex = (currentIndex - 1 + options.count) % options.count
+                selection = options[newIndex]
+            case .right, .down:
+                let newIndex = (currentIndex + 1) % options.count
+                selection = options[newIndex]
+            default:
+                break
+            }
+        }
+    }
+}
+
+// MARK: - DynamicDialogView
+struct DynamicDialogView: View {
+    let fields: [Field]
+    let okLabel: String
+    let cancelLabel: String
+    @State private var values: [String: Any]
+
+    // Dynamically compute the widest label among all fields.
+    private var maxLabelWidth: CGFloat {
+        let labels = fields.map { $0.label + ":" }
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        // Measure the width of each label string
+        let widest =
+            labels.map { (label: String) -> CGFloat in
+                let size = (label as NSString).size(withAttributes: [.font: font])
+                return size.width
+            }.max() ?? 80
+        // Add a little extra padding
+        return widest + 8
+    }
+
+    init(fields: [Field], okLabel: String, cancelLabel: String) {
+        self.fields = fields
+        self.okLabel = okLabel
+        self.cancelLabel = cancelLabel
+
+        var initialValues: [String: Any] = [:]
+        for field in fields {
+            if let defaultValue = field.defaultValue {
+                switch field.type {
+                case .checkbox:
+                    initialValues[field.bindingKey] = (defaultValue.lowercased() == "true")
+                default:
+                    initialValues[field.bindingKey] = defaultValue
+                }
+            }
+        }
+        _values = State(initialValue: initialValues)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(fields) { field in
+                switch field.type {
+                case .text:
+                    HStack(alignment: .center, spacing: 10) {
+                        Text(field.label + ":")
+                            .lineLimit(1)
+                            .frame(width: maxLabelWidth, alignment: .leading)
+                        TextField(
+                            "",
+                            text: Binding(
+                                get: { self.values[field.bindingKey] as? String ?? "" },
+                                set: { self.values[field.bindingKey] = $0 }
+                            )
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        // Make text fields significantly wider
+                        .frame(minWidth: 400)
+                    }
+                case .checkbox:
+                    HStack(alignment: .center, spacing: 10) {
+                        Text(field.label + ":")
+                            .lineLimit(1)
+                            .frame(width: maxLabelWidth, alignment: .leading)
+                        Toggle(
+                            "",
+                            isOn: Binding(
+                                get: { self.values[field.bindingKey] as? Bool ?? false },
+                                set: { self.values[field.bindingKey] = $0 }
+                            )
+                        )
+                        .labelsHidden()
+                        .toggleStyle(CheckboxToggleStyle())
+                        .frame(minWidth: 400, alignment: .leading)
+                    }
+                case .dropdown:
+                    if let options = field.options, !options.isEmpty {
+                        HStack(alignment: .center, spacing: 10) {
+                            Text(field.label + ":")
+                                .lineLimit(1)
+                                .frame(width: maxLabelWidth, alignment: .leading)
+                            Picker(
+                                "",
+                                selection: Binding(
+                                    get: {
+                                        self.values[field.bindingKey] as? String ?? options.first!
+                                    },
+                                    set: { self.values[field.bindingKey] = $0 }
+                                )
+                            ) {
+                                ForEach(options, id: \.self) { option in
+                                    Text(option).tag(option)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .frame(minWidth: 400)
+                        }
+                    }
+                case .texteditor:
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(field.label + ":")
+                            .lineLimit(1)
+                            .frame(width: maxLabelWidth, alignment: .leading)
+                        ResizableTextEditor(
+                            text: Binding(
+                                get: { self.values[field.bindingKey] as? String ?? "" },
+                                set: { self.values[field.bindingKey] = $0 }
+                            )
+                        )
+                        .frame(minWidth: 400, minHeight: 80)
+                    }
+                case .segmented:
+                    if let options = field.options, !options.isEmpty {
+                        HStack(alignment: .center, spacing: 10) {
+                            Text(field.label + ":")
+                                .lineLimit(1)
+                                .frame(width: maxLabelWidth, alignment: .leading)
+                            FlowRadioGroup(
+                                options: options,
+                                selection: Binding(
+                                    get: {
+                                        self.values[field.bindingKey] as? String ?? options.first!
+                                    },
+                                    set: { self.values[field.bindingKey] = $0 }
+                                )
+                            )
+                            .frame(minWidth: 400)
+                        }
+                    }
+                }
+            }
+
+            Divider().padding(.top, 4)
+
+            HStack {
+                Spacer()
+                Button(action: {
+                    NSApplication.shared.terminate(nil)
+                }) {
+                    Text(cancelLabel)
+                        .frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut(.cancelAction)
+                .frame(width: 100)  // fixed width for Cancel
+
+                Button(action: {
+                    var output: [String: Any] = [:]
+                    for field in fields {
+                        switch field.type {
+                        case .text, .texteditor:
+                            output[field.bindingKey] = values[field.bindingKey] as? String ?? ""
+                        case .checkbox:
+                            output[field.bindingKey] = values[field.bindingKey] as? Bool ?? false
+                        case .dropdown, .segmented:
+                            if let options = field.options, !options.isEmpty {
+                                output[field.bindingKey] =
+                                    values[field.bindingKey] as? String ?? options.first!
+                            }
+                        }
+                    }
+                    if let jsonData = try? JSONSerialization.data(
+                        withJSONObject: output, options: []),
+                        let jsonString = String(data: jsonData, encoding: .utf8)
+                    {
+                        print(jsonString)
+                    } else {
+                        print("Failed to encode JSON.")
+                    }
+                    NSApplication.shared.terminate(nil)
+                }) {
+                    Text(okLabel)
+                        .frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut(.defaultAction)
+                .frame(width: 100)  // fixed width for OK
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+    }
+}
+
+// MARK: - AppDelegate + Setup
+class AppDelegate: NSObject, NSApplicationDelegate {
+    var window: NSWindow!
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+
+        let mainMenu = NSMenu()
+
+        // Application menu (with Quit)
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+        let appMenu = NSMenu(title: "Application")
+        appMenuItem.submenu = appMenu
+        appMenu.addItem(
+            withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+
+        // Edit menu with standard items
+        let editMenuItem = NSMenuItem()
+        mainMenu.addItem(editMenuItem)
+        let editMenu = NSMenu(title: "Edit")
+        editMenuItem.submenu = editMenu
+
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(
+            withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(
+            withTitle: "Delete", action: #selector(NSText.delete(_:)), keyEquivalent: "\u{8}")
+        editMenu.addItem(
+            withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        NSApplication.shared.mainMenu = mainMenu
+
+        // Use the first command-line argument as config path, if provided.
+        let configPath = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "config.json"
+        let config = loadConfig(from: configPath)
+
+        // Bump up default window size a bit to accommodate wider fields
+        let width = config.windowWidth ?? 600
+        let height = config.windowHeight ?? 300
+
+        let contentView = DynamicDialogView(
+            fields: config.fields,
+            okLabel: config.okLabel ?? "OK",
+            cancelLabel: config.cancelLabel ?? "Cancel"
+        )
+
+        window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = config.windowTitle ?? "Dialog"
+        window.center()
+        window.contentView = NSHostingView(rootView: contentView)
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+
+        // Set focus to the first text field, if any
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self,
+                let contentView = self.window.contentView
+            else { return }
+            if let textField = self.findFirstTextField(in: contentView) {
+                self.window.makeFirstResponder(textField)
+            }
+        }
+    }
+
+    func findFirstTextField(in view: NSView?) -> NSView? {
+        guard let view = view else { return nil }
+        if view is NSTextField { return view }
+        for subview in view.subviews {
+            if let found = findFirstTextField(in: subview) {
+                return found
+            }
+        }
+        return nil
+    }
+}
+
+// MARK: - Main
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.setActivationPolicy(.regular)
+app.run()

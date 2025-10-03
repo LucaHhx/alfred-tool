@@ -6,6 +6,7 @@ import (
 
 	"alfred-tool/models"
 	"alfred-tool/services"
+
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
@@ -34,11 +35,6 @@ func displayConnections(connections []models.SSHConnection) {
 				Subtitle:  "\U00100A80 复制ip \U00100195 复制内网IP \U0010094C 连接服务器(%s)",
 				Arg:       item.GetArg(),
 				Variables: item.GetVariables(),
-				//Mods: map[models.ModName]models.AlfredMod{
-				//	models.Mod_Cmd: models.NewAlfredMod(fmt.Sprintf("复制IP:%s", item.Address), item.Address),
-				//	models.Mod_Alt: models.NewAlfredMod(fmt.Sprintf("复制内网IP:%s", item.LocalIP), item.LocalIP),
-				//	models.Mod_Fn:  models.NewAlfredMod("连接服务器", item.GetArg()...),
-				//},
 			}
 		}),
 	}
