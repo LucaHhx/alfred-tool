@@ -61,7 +61,7 @@ func loadConfig(from pathOrJSON: String) -> Config {
 }
 
 // MARK: - Config Models
-struct Field: Identifiable, Codable {
+struct Field: Identifiable, Codable, Comparable {
     enum FieldType: String, Codable {
         case text, checkbox, dropdown, texteditor, segmented, filepicker
     }
@@ -73,9 +73,16 @@ struct Field: Identifiable, Codable {
     let defaultValue: String?
     let filePickerType: String? // "file" or "folder"
     let copy: Bool? // show copy button for text/texteditor
+    let note: String? // note text shown below field in red
+    let order: Int // display order
 
     private enum CodingKeys: String, CodingKey {
-        case type, label, bindingKey, options, defaultValue, filePickerType, copy
+        case type, label, bindingKey, options, defaultValue, filePickerType, copy, note, order
+    }
+
+    // Implement Comparable for sorting
+    static func < (lhs: Field, rhs: Field) -> Bool {
+        return lhs.order < rhs.order
     }
 }
 
@@ -83,10 +90,15 @@ struct Config: Codable {
     let windowTitle: String?
     let windowWidth: CGFloat?
     let windowHeight: CGFloat?
-    let fields: [Field]
+    let fields: [String: Field]
     let okLabel: String?
     let cancelLabel: String?
     let alwaysOnTop: Bool?
+
+    // Computed property to get fields as sorted array
+    var sortedFields: [Field] {
+        return Array(fields.values).sorted()
+    }
 }
 
 // MARK: - NSTextViewRepresentable for Resizable TextEditor (CustomTextView)
@@ -266,86 +278,19 @@ struct DynamicDialogView: View {
             ForEach(fields) { field in
                 switch field.type {
                 case .text:
-                    HStack(alignment: .center, spacing: 10) {
-                        Text(field.label + ":")
-                            .lineLimit(1)
-                            .frame(width: maxLabelWidth, alignment: .leading)
-                        TextField(
-                            "",
-                            text: Binding(
-                                get: { self.values[field.bindingKey] as? String ?? "" },
-                                set: { self.values[field.bindingKey] = $0 }
-                            )
-                        )
-                        .textFieldStyle(.roundedBorder)
-                        // Make text fields significantly wider
-                        .frame(minWidth: 400)
-
-                        if field.copy == true {
-                            Button(action: {
-                                let pasteboard = NSPasteboard.general
-                                pasteboard.clearContents()
-                                pasteboard.setString(
-                                    self.values[field.bindingKey] as? String ?? "",
-                                    forType: .string
-                                )
-                            }) {
-                                Label("", systemImage: "doc.on.doc")
-                            }
-                            .labelStyle(.iconOnly)
-                            .frame(width: 30)
-                        }
-                    }
-                case .checkbox:
-                    HStack(alignment: .center, spacing: 10) {
-                        Text(field.label + ":")
-                            .lineLimit(1)
-                            .frame(width: maxLabelWidth, alignment: .leading)
-                        Toggle(
-                            "",
-                            isOn: Binding(
-                                get: { self.values[field.bindingKey] as? Bool ?? false },
-                                set: { self.values[field.bindingKey] = $0 }
-                            )
-                        )
-                        .labelsHidden()
-                        .toggleStyle(CheckboxToggleStyle())
-                        .frame(minWidth: 400, alignment: .leading)
-                    }
-                case .dropdown:
-                    if let options = field.options, !options.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .center, spacing: 10) {
                             Text(field.label + ":")
                                 .lineLimit(1)
                                 .frame(width: maxLabelWidth, alignment: .leading)
-                            Picker(
+                            TextField(
                                 "",
-                                selection: Binding(
-                                    get: {
-                                        self.values[field.bindingKey] as? String ?? options.first!
-                                    },
-                                    set: { self.values[field.bindingKey] = $0 }
-                                )
-                            ) {
-                                ForEach(options, id: \.self) { option in
-                                    Text(option).tag(option)
-                                }
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .frame(minWidth: 400)
-                        }
-                    }
-                case .texteditor:
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(field.label + ":")
-                        HStack(alignment: .top, spacing: 10) {
-                            FixedTextEditor(
                                 text: Binding(
                                     get: { self.values[field.bindingKey] as? String ?? "" },
                                     set: { self.values[field.bindingKey] = $0 }
-                                ),
-                                height: 100
+                                )
                             )
+                            .textFieldStyle(.roundedBorder)
 
                             if field.copy == true {
                                 Button(action: {
@@ -360,41 +305,159 @@ struct DynamicDialogView: View {
                                 }
                                 .labelStyle(.iconOnly)
                                 .frame(width: 30)
+                            } else {
+                                Spacer().frame(width: 0)
                             }
                         }
+                        if let note = field.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, maxLabelWidth + 10)
+                        }
                     }
-                    .padding(.vertical, 4)
-                case .segmented:
-                    if let options = field.options, !options.isEmpty {
+                case .checkbox:
+                    VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .center, spacing: 10) {
                             Text(field.label + ":")
                                 .lineLimit(1)
                                 .frame(width: maxLabelWidth, alignment: .leading)
-                            FlowRadioGroup(
-                                options: options,
-                                selection: Binding(
-                                    get: {
-                                        self.values[field.bindingKey] as? String ?? options.first!
-                                    },
+                            Toggle(
+                                "",
+                                isOn: Binding(
+                                    get: { self.values[field.bindingKey] as? Bool ?? false },
                                     set: { self.values[field.bindingKey] = $0 }
                                 )
                             )
-                            .frame(minWidth: 400)
+                            .labelsHidden()
+                            .toggleStyle(CheckboxToggleStyle())
+                            Spacer()
+                        }
+                        if let note = field.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, maxLabelWidth + 10)
+                        }
+                    }
+                case .dropdown:
+                    if let options = field.options, !options.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .center, spacing: 10) {
+                                Text(field.label + ":")
+                                    .lineLimit(1)
+                                    .frame(width: maxLabelWidth, alignment: .leading)
+                                Picker(
+                                    "",
+                                    selection: Binding(
+                                        get: {
+                                            self.values[field.bindingKey] as? String ?? options.first!
+                                        },
+                                        set: { self.values[field.bindingKey] = $0 }
+                                    )
+                                ) {
+                                    ForEach(options, id: \.self) { option in
+                                        Text(option).tag(option)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                                Spacer()
+                            }
+                            if let note = field.note, !note.isEmpty {
+                                Text(note)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding(.leading, maxLabelWidth + 10)
+                            }
+                        }
+                    }
+                case .texteditor:
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(field.label + ":")
+                                .frame(width: maxLabelWidth, alignment: .leading)
+                                .padding(.top, 8)
+                            VStack(spacing: 0) {
+                                FixedTextEditor(
+                                    text: Binding(
+                                        get: { self.values[field.bindingKey] as? String ?? "" },
+                                        set: { self.values[field.bindingKey] = $0 }
+                                    ),
+                                    height: 100
+                                )
+                            }
+
+                            if field.copy == true {
+                                Button(action: {
+                                    let pasteboard = NSPasteboard.general
+                                    pasteboard.clearContents()
+                                    pasteboard.setString(
+                                        self.values[field.bindingKey] as? String ?? "",
+                                        forType: .string
+                                    )
+                                }) {
+                                    Label("", systemImage: "doc.on.doc")
+                                }
+                                .labelStyle(.iconOnly)
+                                .frame(width: 30)
+                                .padding(.top, 8)
+                            } else {
+                                Spacer().frame(width: 0)
+                            }
+                        }
+                        if let note = field.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, maxLabelWidth + 10)
+                        }
+                    }
+                case .segmented:
+                    if let options = field.options, !options.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .center, spacing: 10) {
+                                Text(field.label + ":")
+                                    .lineLimit(1)
+                                    .frame(width: maxLabelWidth, alignment: .leading)
+                                FlowRadioGroup(
+                                    options: options,
+                                    selection: Binding(
+                                        get: {
+                                            self.values[field.bindingKey] as? String ?? options.first!
+                                        },
+                                        set: { self.values[field.bindingKey] = $0 }
+                                    )
+                                )
+                                Spacer()
+                            }
+                            if let note = field.note, !note.isEmpty {
+                                Text(note)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding(.leading, maxLabelWidth + 10)
+                            }
                         }
                     }
                 case .filepicker:
-                    HStack(alignment: .center, spacing: 10) {
-                        Text(field.label + ":")
-                            .lineLimit(1)
-                            .frame(width: maxLabelWidth, alignment: .leading)
-                        FilePickerField(
-                            path: Binding(
-                                get: { self.values[field.bindingKey] as? String ?? "" },
-                                set: { self.values[field.bindingKey] = $0 }
-                            ),
-                            pickerType: field.filePickerType ?? "file"
-                        )
-                        .frame(minWidth: 400)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .center, spacing: 10) {
+                            Text(field.label + ":")
+                                .lineLimit(1)
+                                .frame(width: maxLabelWidth, alignment: .leading)
+                            FilePickerField(
+                                path: Binding(
+                                    get: { self.values[field.bindingKey] as? String ?? "" },
+                                    set: { self.values[field.bindingKey] = $0 }
+                                ),
+                                pickerType: field.filePickerType ?? "file"
+                            )
+                        }
+                        if let note = field.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, maxLabelWidth + 10)
+                        }
                     }
                 }
             }
@@ -455,8 +518,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
 
-        // Suppress system debug messages
+        // Suppress system debug messages and stderr output
         setenv("OS_ACTIVITY_MODE", "disable", 1)
+
+        // Redirect stderr to /dev/null to suppress system warnings
+        freopen("/dev/null", "a", stderr)
 
         let mainMenu = NSMenu()
 
@@ -492,19 +558,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let configPath = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "config.json"
         let config = loadConfig(from: configPath)
 
-        // Bump up default window size a bit to accommodate wider fields
-        let width = config.windowWidth ?? 600
-        let height = config.windowHeight ?? 300
+        // Calculate minimum window size based on fields
+        let sortedFields = config.sortedFields
+
+        // Calculate height: each field ~40px, texteditor ~120px, spacing + padding + buttons
+        var calculatedHeight: CGFloat = 80 // top/bottom padding + button area
+        for field in sortedFields {
+            switch field.type {
+            case .texteditor:
+                calculatedHeight += 130 // texteditor height + label + spacing
+            default:
+                calculatedHeight += 40 // normal field height
+            }
+            // Add space for note if present
+            if let note = field.note, !note.isEmpty {
+                calculatedHeight += 20
+            }
+        }
+
+        // Calculate width: longest label + control width + padding
+        let labels = sortedFields.map { $0.label + ":" }
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let maxLabelWidth = labels.map { (label: String) -> CGFloat in
+            let size = (label as NSString).size(withAttributes: [.font: font])
+            return size.width
+        }.max() ?? 80
+        let calculatedWidth = maxLabelWidth + 400 + 60 // label + control + padding
+
+        let width = config.windowWidth ?? max(500, calculatedWidth)
+        let height = config.windowHeight ?? max(300, calculatedHeight)
 
         let contentView = DynamicDialogView(
-            fields: config.fields,
+            fields: sortedFields,
             okLabel: config.okLabel ?? "OK",
             cancelLabel: config.cancelLabel ?? "Cancel"
         )
 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: width, height: height),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .resizable],
             backing: .buffered,
             defer: false
         )
