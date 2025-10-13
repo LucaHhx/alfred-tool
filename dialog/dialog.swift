@@ -61,6 +61,11 @@ func loadConfig(from pathOrJSON: String) -> Config {
 }
 
 // MARK: - Config Models
+struct VisibleWhen: Codable, Equatable {
+    let watchField: String
+    let expectedValue: String
+}
+
 struct Field: Identifiable, Codable, Comparable {
     enum FieldType: String, Codable {
         case text, checkbox, dropdown, texteditor, segmented, filepicker
@@ -75,9 +80,10 @@ struct Field: Identifiable, Codable, Comparable {
     let copy: Bool? // show copy button for text/texteditor
     let note: String? // note text shown below field in red
     let order: Int // display order
+    let visibleWhen: VisibleWhen? // conditional visibility
 
     private enum CodingKeys: String, CodingKey {
-        case type, label, bindingKey, options, defaultValue, filePickerType, copy, note, order
+        case type, label, bindingKey, options, defaultValue, filePickerType, copy, note, order, visibleWhen
     }
 
     // Implement Comparable for sorting
@@ -273,11 +279,25 @@ struct DynamicDialogView: View {
         _values = State(initialValue: initialValues)
     }
 
+    // Check if a field should be visible based on its visibleWhen condition
+    private func shouldShowField(_ field: Field) -> Bool {
+        guard let visibleWhen = field.visibleWhen else {
+            return true // No condition means always visible
+        }
+
+        // Get the current value of the watched field
+        let watchedValue = values[visibleWhen.watchField] as? String ?? ""
+
+        // Return true if the watched value matches the expected value
+        return watchedValue == visibleWhen.expectedValue
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             ForEach(fields) { field in
-                switch field.type {
-                case .text:
+                if shouldShowField(field) {
+                    switch field.type {
+                    case .text:
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .center, spacing: 10) {
                             Text(field.label + ":")
@@ -458,6 +478,7 @@ struct DynamicDialogView: View {
                                 .foregroundColor(.red)
                                 .padding(.leading, maxLabelWidth + 10)
                         }
+                    }
                     }
                 }
             }

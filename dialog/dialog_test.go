@@ -52,6 +52,7 @@ func TestDialog(t *testing.T) {
 			field.NewFileField("avatar", "头像文件",
 				field.WithNote("支持 JPG、PNG 格式，大小不超过 2MB"),
 				field.WithOrder(6),
+				field.WithVisibleWhen("theme", "深色"),
 			),
 
 			// 文件夹选择器
@@ -59,6 +60,7 @@ func TestDialog(t *testing.T) {
 				field.WithDefaultValue("/Users"),
 				field.WithNote("选择文件的保存位置"),
 				field.WithOrder(7),
+				field.WithVisibleWhen("theme", "自动"),
 			),
 		),
 	).Open()
@@ -66,27 +68,5 @@ func TestDialog(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	t.Log("对话框返回结果:", string(open))
-}
-
-func TestDialogSimple(t *testing.T) {
-	// 简单的两字段对话框
-	open, err := NewDialog(
-		WithTitle("简单输入框"),
-		WithFields(
-			field.NewTextField("name", "姓名",
-				field.WithNote("请输入您的姓名"),
-				field.WithOrder(1),
-			),
-			field.NewTextField("email", "邮箱",
-				field.WithNote("请输入有效的邮箱地址"),
-				field.WithOrder(2),
-			),
-		),
-	).Open()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	t.Log("简单对话框返回结果:", string(open))
+	t.Log("对话框返回结果:", open)
 }

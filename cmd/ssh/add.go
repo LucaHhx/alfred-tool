@@ -1,7 +1,7 @@
 package ssh
 
 import (
-	"alfred-tool/ui"
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
@@ -10,6 +10,9 @@ var AddCmd = &cobra.Command{
 	Short: "添加SSH连接",
 	Long:  `添加新的SSH连接配置。`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ui.ShowAddDialog()
+		if err := ShowAddDialogV2(); err != nil {
+			fmt.Printf("添加连接失败: %v\n", err)
+			return
+		}
 	},
 }

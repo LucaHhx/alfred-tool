@@ -121,6 +121,24 @@ func WithOrder(order int) FieldOption {
 	}
 }
 
+// WithVisibleWhen 设置字段的条件显示规则
+// 参数:
+//   - watchField: 需要监听的字段的 bindingKey
+//   - expectedValue: 当 watchField 的值等于此值时，该字段才显示
+//
+// 示例:
+//
+//	WithVisibleWhen("passwordType", "密码")  // 当 passwordType 字段的值为 "密码" 时显示
+//	WithVisibleWhen("authMode", "OAuth")    // 当 authMode 字段的值为 "OAuth" 时显示
+func WithVisibleWhen(watchField, expectedValue string) FieldOption {
+	return func(f *Field) {
+		f.VisibleWhen = &VisibleWhen{
+			WatchField:    watchField,
+			ExpectedValue: expectedValue,
+		}
+	}
+}
+
 func NewField(fieldType FieldType, opts ...FieldOption) Field {
 	f := Field{
 		Type: fieldType,

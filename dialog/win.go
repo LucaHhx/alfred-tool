@@ -71,17 +71,24 @@ func (d *Dialog) AddFields(fields ...field.Field) {
 	}
 }
 
-func (d *Dialog) Open() ([]byte, error) {
+func (d *Dialog) Open() (map[string]any, error) {
 	dialogJSON, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 	// 运行 dialog 可执行文件，直接传递 JSON 字符串作为参数
-	cmd := exec.Command("./dialog", string(dialogJSON))
+	cmd := exec.Command("/Users/luca/github/LucaHhx/alfred-tool/dialog/dialog", string(dialogJSON))
 	cmd.Dir = "/Users/luca/github/LucaHhx/alfred-tool/dialog"
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
-	return output, nil
+
+	value := make(map[string]any)
+
+	err = json.Unmarshal(output, &value)
+	if err != nil {
+		return value, err
+	}
+	return value, nil
 }

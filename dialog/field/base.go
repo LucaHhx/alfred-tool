@@ -26,6 +26,14 @@ type Field struct {
 	Copy           bool           `json:"copy,omitempty"`
 	FilePickerType FilePickerType `json:"filePickerType,omitempty"`
 	Options        []string       `json:"options,omitempty"`
-	Note           string         `json:"note,omitempty"` // 字段备注，显示在控件下方的红色小字
-	Order          int            `json:"order"`          // 字段显示顺序，数字越小越靠前
+	Note           string         `json:"note,omitempty"`        // 字段备注，显示在控件下方的红色小字
+	Order          int            `json:"order"`                 // 字段显示顺序，数字越小越靠前
+	VisibleWhen    *VisibleWhen   `json:"visibleWhen,omitempty"` // 条件显示配置
+}
+
+// VisibleWhen 定义字段的可见性条件
+// 当指定字段(WatchField)的值等于期望值(ExpectedValue)时，该字段才显示
+type VisibleWhen struct {
+	WatchField    string `json:"watchField"`    // 监听的字段 bindingKey
+	ExpectedValue string `json:"expectedValue"` // 期望的值，当 watchField 的值等于此值时显示该字段
 }
