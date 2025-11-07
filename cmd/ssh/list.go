@@ -31,8 +31,8 @@ func displayConnections(connections []models.SSHConnection) {
 		Items: lo.Map(connections, func(item models.SSHConnection, index int) models.AlfredItem {
 			return models.AlfredItem{
 				Uid:       item.Name,
-				Title:     fmt.Sprintf("%s-%s (%s)", item.Name, item.Address, item.Description),
-				Subtitle:  "\U00100A80 复制ip \U0010094C 连接服务器(%s) \U00100196 删除",
+				Title:     fmt.Sprintf("%s (%s)", item.Name, item.Address),
+				Subtitle:  "\U00100A80 复制ip \U0010094C 连接服务器(%s) \U00100196 删除连接",
 				Arg:       item.GetArg(),
 				Variables: item.GetVariables(),
 			}
