@@ -15,12 +15,12 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal("无法获取用户主目录:", err)
-	}
-
-	dbPath := filepath.Join(homeDir, ".sshd", "connections.db")
+	//homeDir, err := os.UserHomeDir()
+	//if err != nil {
+	//	log.Fatal("无法获取用户主目录:", err)
+	//}
+	var err error
+	dbPath := filepath.Join("/Users/luca/Library/Mobile Documents/com~apple~CloudDocs/ssh/connections.db")
 
 	// 创建目录
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
